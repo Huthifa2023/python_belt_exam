@@ -4,7 +4,50 @@ from django.contrib import messages
 import bcrypt
 
 
-# Create your views here.
+def main(request):
+    if 'id' in request.session:
+        return render(request, 'main.html')
+    else:
+        return redirect('/login')
+
+def login(request):
+    return render(request, 'login.html')
+
+def add_user(request):
+    errors = User.objects.validator(request.POST)
+    if len(errors) > 0:
+        for k , v in errors.items():
+            messages.error(request, v)
+        return redirect('/login')
+    else:
+        User.objects.create(
+            first_name = request.POST['first_name'],
+            last_name = request.POST['last_name'],
+            email = request.POST['email'],
+            password = bcrypt.hashpw(request.POST['password'].encode(), bcrypt.gensalt()).decode(),
+        )
+        messages.success(request, 'New user added successfully, please login!')
+        return redirect('/login')
+
+def login_request(request):
+    user = User.objects.filter(email = request.POST['email'])
+    if user:
+        user = user[0]
+        if bcrypt.checkpw(request.POST['password'].encode(), user.password.encode()):
+            request.session['id'] = user.id
+            return redirect('/')
+        else:
+            messages.error(request, 'Wrong Email or Passowrd')
+            return redirect('/login')
+    else:
+        messages.error(request, 'Wrong Email or Passowrd')
+        return redirect('/login')
+
+def logout(request):
+    request.session.flush()
+    return redirect('/login')
+
+###################################################################End login & Registration methods
 
 
 
@@ -14,59 +57,109 @@ import bcrypt
 
 
 
-
-
-# def index(request):
-#     return render(request, 'index.html')
-
-
-# def register(request):
-#     errors = User.objects.validator(request.POST)
-#     if len(errors) > 0:
-#         for k , v in errors.items():
-#             messages.error(request, v)
-#         return redirect('/')
+# def main(request):
+#     if 'id' in request.session:
+#         user = User.objects.get(id = request.session['id'])
+#         context = {
+#             'user' : user,
+#             'all_books' : Book.objects.all(),
+#             'liked_books' : user.liked_books.all(),
+#         }
+#         return render(request, 'main.html', context)
 #     else:
-#         user = User.objects.create(
-#             first_name = request.POST['first_name'],
-#             last_name = request.POST['last_name'],
-#             email = request.POST['email'],
-#             password = bcrypt.hashpw(request.POST['password'].encode(), bcrypt.gensalt()).decode(),
-#             birth_day = request.POST['birth_day'],
-#         )
-#         user.save()
-#         return redirect(f'/success')
-
-
-# def success(request):
-#     if 'id' in request.session:             #Don't allow a user who is not logged in to reach the /success route (i.e. by making a GET request in the address bar)
-#         user = User.objects.get(id =request.session['id'])
-#         request.session['first_name'] = user.first_name
-#         request.session['last_name'] = user.last_name
-#         request.session['email'] = user.email
-#         request.session['age'] = int(str(date.today())[0:4]) - int(str(user.birth_day)[0:4])
-#         return render(request, 'success.html')
-#     else:
-#         messages.error(request,'please sign in to show this profile ')
-#         return redirect('/')
-
+#         return redirect('/login/')
 
 
 # def login(request):
-#     x = User.objects.filter(email = request.POST['email'])
-#     if x:
-#         logged_user = x[0]
-#         if bcrypt.checkpw(request.POST['password'].encode() , logged_user.password.encode()):
-#             request.session['id'] = logged_user.id     #Don't allow a user who is not logged in to reach the /success route (i.e. by making a GET request in the address bar)
-#             return redirect(f'/success')
-#         else:
-#             messages.error(request, 'wrong email or password!')
-#             return redirect('/')
+#     return render(request, 'login.html')
+
+
+# def add_user(request):
+#     errors = User.objects.validator(request.POST)
+#     if len(errors) > 0:
+#         for k, v in errors.items():
+#             messages.error(request, v)
+#         return redirect('/login/')
 #     else:
-#         messages.error(request, 'wrong email or password!')
-#         return redirect('/')
+#         hashed_password = bcrypt.hashpw(request.POST['password'].encode() , bcrypt.gensalt()).decode()
+#         User.objects.create(
+#             first_name = request.POST['first_name'],
+#             last_name = request.POST['last_name'],
+#             email = request.POST['email'],
+#             password = hashed_password,
+#         )
+#         messages.success(request, 'User Added Succesfuly, sign in to see the books!')
+#         return redirect('/login/')
+    
 
 
-# def logout(request):
+# def login_request(request):
+#     user = User.objects.filter(email = request.POST['email'])
+#     if user:
+#         user = user[0]
+#         if bcrypt.checkpw(request.POST['password'].encode(), user.password.encode()):
+#             request.session['id'] = user.id
+#             return redirect('/books/')
+#         else:
+#             messages.error(request, 'wrong email or password')
+#             return redirect('/login/')
+#     else:
+#         messages.error(request, 'wrong email or password')
+#         return redirect('/login/')
+
+
+# def LogOut(request):
 #     request.session.flush()
-#     return redirect('/')
+#     return redirect('/login/')
+
+
+# def add_book(request):
+#     errors = Book.objects.validator(request.POST)
+#     if len(errors) > 0:
+#         for k , v in errors:
+#             messages.error(request, v)
+#         return redirect('/books/')
+#     else:
+#         session_user = User.objects.get(id = request.session['id'])
+#         book = Book.objects.create(
+#             title = request.POST['title'],
+#             desc = request.POST['desc'],
+#             created_by = session_user,
+#         )
+#         book.save()
+#         session_user.liked_books.add(book)
+#         return redirect('/books/')
+    
+
+# def like_book(request, book_id):
+#     session_user = User.objects.get(id = request.session['id'])
+#     session_user.liked_books.add(Book.objects.get(id = book_id))
+#     return redirect(f'/view_book/{book_id}/')
+
+
+# def unlike_book(request, book_id):
+#     session_user = User.objects.get(id = request.session['id'])
+#     session_user.liked_books.remove(Book.objects.get(id = book_id))
+#     return redirect(f'/view_book/{book_id}/')
+
+# def view_book(request, book_id):
+#     the_book = Book.objects.get(id = book_id)
+#     user = User.objects.get(id = request.session['id'])
+#     context = {
+#         'user' : user,
+#         'the_book' : the_book,
+
+#     }
+#     return render(request, 'view_book.html', context)
+
+# def update_desc(request):
+#     book = Book.objects.get(id=request.POST['book_id'])
+#     book.desc = request.POST['desc']
+#     book.save()
+#     return redirect(f'/view_book/{book.id}/')
+
+
+# def delete_book(request, book_id):
+#     book = Book.objects.get(id = book_id)
+#     book.delete()
+#     return redirect('/books/')
