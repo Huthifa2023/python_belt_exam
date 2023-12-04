@@ -1,6 +1,6 @@
 from django.db import models
 import re
-
+from datetime import date
 
 
 class UserManager(models.Manager):
@@ -12,8 +12,8 @@ class UserManager(models.Manager):
         if len(POST_data['last_name']) < 2:                                         #last name length
             errors['last_name'] = 'your last name should be at least 4 characters'
 
-        if User.objects.filter(email = POST_data['email']):                         #account already exists? unique email
-            errors['account_exsits'] = 'email address used for another account!'
+        if User.objects.filter(email = POST_data['email']):          #account already exists? unique email
+            errors['email_exists'] = 'This account already exsists'
 
         email_regex = re.compile(r'^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]+$')  #email syntax valid?
         if not email_regex.match(POST_data['email']):
@@ -32,4 +32,26 @@ class User(models.Model):
     email = models.EmailField(max_length=255)
     password = models.CharField(max_length=255)
     objects = UserManager()
+    #sightings =
+    #skeptics =
 ###################################################################End User table with validations
+
+class SightManager(models.Manager):
+    def validator(self,POST_data):
+        errors = {}
+        if POST_data['date'] > str(date.today()):                              
+            errors['date_past']= 'Date of sighting must be in the past'
+        if int(POST_data['number_sasquatches']) < 1:
+            errors['number_sasquatches'] = 'number of sasquatches must be greater then 0'
+        if len(POST_data['desc']) > 50:
+            errors['notes_max'] = 'notes on what happend should have maximum 50 characters'
+        return errors
+    
+class Sight(models.Model):
+    location = models.CharField(max_length=255)
+    date = models.DateField()
+    number_sasquatches = models.IntegerField()
+    desc = models.TextField()
+    user = models.ForeignKey(User, related_name='sightings', on_delete=models.CASCADE)
+    skeptics = models.ManyToManyField(User, related_name='skeptics')
+    objects = SightManager()
